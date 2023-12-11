@@ -1,0 +1,111 @@
+---
+title: "CS 422 HW5"
+author: "Syed Alle Mustafa, Illinois Institute of Technology"
+output:
+  html_notebook:
+    toc: yes
+    toc_float: yes
+  html_document:
+    toc: yes
+    df_print: paged
+---
+
+### Import Dataset
+
+```{r}
+trainData <- read.csv("C:/Users/alley.mustafa/Downloads/adult-train.csv")
+print(trainData)
+testData <- read.csv("C:/Users/alley.mustafa/Downloads/adult-test.csv")
+print(testData)
+```
+
+### Part 2.2-A
+
+```{r}
+impureColumns <- which(colSums(trainData == "?") > 0)
+impureRows <- which(trainData[, impureColumns] == "?", arr.ind = TRUE)[, 1]
+trainData <- trainData[-rows_to_remove, ]
+nrow(trainData)
+impureColumns <- which(colSums(testData == "?") > 0)
+impureRows <- which(testData[, impureColumns] == "?", arr.ind = TRUE)[, 1]
+testData <- testData[-impureRows, ]
+nrow(testData)
+```
+
+### Part 2.2-B
+
+```{r}
+library(rpart)
+library(rpart.plot)
+tree <- rpart(income ~ ., data = trainData)
+print(summary(tree)$importance)
+cat("Relationship Status, Marital Status and Capital gain are the most important variables");
+cat("\nThe first split is made on Relationship")
+cat("the distribution for first child is 16292 obs and 13869 obs respectively.")
+plot(tree)
+text(tree)
+```
+
+### Part 2.2-C
+
+```{r}
+library(pROC)
+predictions <- predict(tree, newdata = testData, type = "class")
+cfsMatrix <- table(testData$income, predictions)
+sensitivity <- cfsMatrix[2,2]/sum(cfsMatrix[2,])
+specificity <- cfsMatrix[1,1]/sum(cfsMatrix[1,])
+balanced_accuracy <- (sensitivity + specificity)/2
+cat("The balanced accuracy of the model:",round(balanced_accuracy, 3))
+cat("\nThe balanced error rate of the model:",round(1-balanced_accuracy, 3))
+cat("\nSensitivity of the model:", round(sensitivity,3))
+cat("\nSpecificity of the model:", round(specificity,3))
+predictions <- as.numeric(predictions)
+roc_curve <- roc(testData$income, predictions)
+auc <- auc(roc_curve)
+cat("The Area under the curve of the model is",auc)
+plot(roc_curve)
+```
+
+### Part 2.2-D
+
+```{r}
+printcp(tree)
+cat("According to the complexity table, we can see we are overfitting")
+cat("\n as the complexity decreases to 0.01, the pruning point should be 0.01cp")
+```
+
+
+### Part 2.2-E
+```{r}
+print(table(trainData$income))
+set.seed(1122)
+countLess <- sum(trainData$income == ">50K")
+newtrainData <- rbind(
+  trainData[sample(which(trainData$income == "<=50K"), countLess),],
+  trainData[sample(which(trainData$income == ">50K")),]
+)
+print(table(newtrainData$income))
+
+tree2 <- rpart(income ~ ., data = newtrainData,method="class")
+predictions <- predict(tree2, newdata = testData, type = "class")
+cfsMatrix <- table(testData$income, predictions)
+sensitivity <- cfsMatrix[2,2]/sum(cfsMatrix[2,])
+specificity <- cfsMatrix[1,1]/sum(cfsMatrix[1,])
+balanced_accuracy <- (sensitivity + specificity)/2
+cat("The balanced accuracy of the model:",round(balanced_accuracy, 3))
+cat("\nThe balanced error rate of the model:",round(1-balanced_accuracy, 3))
+cat("\nSensitivity of the model:", round(sensitivity,3))
+cat("\nSpecificity of the model:", round(specificity,3))
+predictions <- as.numeric(predictions)
+roc_curve <- roc(testData$income, predictions)
+auc <- auc(roc_curve)
+cat("The Area under the curve of the model is",auc)
+plot(roc_curve)
+```
+### Part 2.2-F
+```{r}
+cat("Model 2 have a better performance given by the results, its balanced accuracy is better and error rate is also better than the previous model. also area under the curve of model 2 is greater which explains that it has a better performance on identifying difference between the classes. One point is worth noting that is specificity of model 1 was better but that was due to class imbalance")
+```
+
+
+
